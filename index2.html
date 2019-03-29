@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="index2.css">
+</head>
+<body>
+    <div class="comment">
+        <div class="comment_head">
+            <div class="comment_head_box">
+                <p class="comment_head_sound" title="录音"></p>
+                <p class="comment_head_stop"  title="停止录音"></p>
+                <p class="comment_head_pencil"  title="铅笔"></p>
+                <p class="comment_head_list"  title="画笔菜单"></p>
+                <p class="comment_head_big"  title="放大图片"></p>
+                <p class="comment_head_small"  title="缩小图片"></p>
+                <p class="comment_head_out">结束讲评</p>
+                <div class="container">
+                    <div class="row">
+                        <ul name="" class="type">
+                            <li class="line" data="line">直&nbsp;&nbsp;&nbsp;线</li>
+                            <li class="rect" data="square">矩&nbsp;&nbsp;&nbsp;形</li>
+                            <li class="circle" data="circle">圆&nbsp;&nbsp;&nbsp;圈</li>
+                            <!-- <li class="poly" data="poly">多&nbsp;边&nbsp;形
+                                <div class="bian"><span>边数</span><input type="number" name="number" min="3" value="3" max="15"></div>
+                            </li> -->
+                            <li class="eraser" data="rubber">橡&nbsp;&nbsp;&nbsp;皮</li>
+                        </ul>
+                        <!-- <ul class="style">
+                            <li class="stroke styleactive">描&nbsp;&nbsp;&nbsp;边</li>
+                            <li class="fill">填&nbsp;&nbsp;&nbsp;充</li>
+                        </ul> -->
+                        <!-- <div class="space"></div> -->
+                        <div class="box"><span>颜色</span></label><input type="color" name="color" value="#000000"></div>
+                        <div class="box linewidth"><span>线宽</span><input type="number" name="number" value="1" max="150" min="1"></div>
+                        <div class="space"></div>
+                        <div class="clear shezhi">清&nbsp;&nbsp;&nbsp;空</div>
+                        <div class="back shezhi">撤&nbsp;&nbsp;&nbsp;销</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="comment_canvasBox">
+            <div class="comment_canvasBox_img">
+                <img src="1.jpg" />
+            </div>
+            <canvas></canvas>
+        </div>
+    </div>
+</body>
+
+<script type="text/javascript" src="index.js"></script>
+<script type="text/javascript" src="jquery.min.js"></script>
+<script type="text/javascript" src="recorder/HZRecorder.js"></script>
+<script>
+    var imgW = $(".comment_canvasBox_img").find("img").width();
+    var imgH = $(".comment_canvasBox_img").find("img").height();
+    var canvas=document.querySelector("canvas");
+    $(".comment_canvasBox_img").css("width", imgW + "px");
+    canvas.width = imgW;
+    canvas.height = imgH;
+
+    //画笔菜单
+    var containerShow = false;
+    $(".comment_head_list").click(function(){
+        if(containerShow){
+            //$(".container").hide();
+            $(".container").fadeOut();
+            containerShow = false;
+        }else{
+            //$(".container").show();
+            $(".container").fadeIn();
+            containerShow = true;
+        }
+    });
+
+    var obj=canvas.getContext("2d");
+    var typechoose=$(".type li");
+    var stylechoose=$(".style li");
+    var colorchoose=document.querySelector("input[type=color]");
+    var widthchoose=document.querySelector(".linewidth input[type=number]");
+    var poly=$(".poly");
+    var bian=$(".bian");
+    var polychoose=$(".bian input");
+    var shezhi=$(".shezhi");
+    var cut=$(".cut");
+    var copy=$(".copy");
+    var back=$(".back");
+    var clear=$(".clear");
+    var save=$(".save");
+    var cutflag=false;
+    var iscut=true;
+    var color="#000";
+    var type="pencil";
+    var n=3;
+    var linewidth="1";
+    var style="stroke";
+    var arr=[];
+    $(".fill").css({display:"none"});
+
+    // 多边形
+    poly.hover(function(){
+        bian.fadeIn();
+    },function(){
+        bian.fadeOut();
+    })
+
+    // 绘制形状
+    typechoose.each(function(index,ele){
+        $(ele).click(function(){
+            typechoose.removeClass("typeactive");
+            $(this).toggleClass("typeactive");
+            cut.css({color:"#fff",backgroundColor:"#5bd219",opacity:1});
+            copy.css({color:"#fff",backgroundColor:"#5bd219",opacity:1});
+            type=$(this).attr("data");
+            if($(this).is(".line")){
+                style="stroke";
+                $(".stroke").addClass("styleactive");
+                $(".fill").css({display:"none"}).removeClass("styleactive");
+            }else{
+                $(".fill").css({display:"block"});
+            }
+        })
+    })
+
+    $(".comment_head_pencil").click(function(){
+        typechoose.removeClass("typeactive");
+        cut.css({color:"#fff",backgroundColor:"#5bd219",opacity:1});
+        copy.css({color:"#fff",backgroundColor:"#5bd219",opacity:1});
+        type = "pencil";
+        style="stroke";
+        $(".stroke").addClass("styleactive");
+        $(".fill").css({display:"none"}).removeClass("styleactive");
+    });
+
+    // 描边、填充单击事件
+    stylechoose.each(function(index,ele){
+        $(ele).click(function(){
+            style=$(this).attr("class");
+            stylechoose.removeClass("styleactive");
+            $(this).toggleClass("styleactive");
+        })
+    })
+
+    // 设置
+    shezhi.each(function(index,ele){
+        $(ele).click(function(){
+            $(this).css({color:"#5bd219",backgroundColor:"#fff"}).animate({opacity:0.99},200,function(){
+                $(this).css({color:"#fff",backgroundColor:"#5bd219",opacity:1});
+            });
+        })
+    })
+
+    // 撤销
+    back.click(function(){
+        arr.pop();
+        obj.clearRect(0,0,imgW,imgH);
+        if(arr.length>0){
+            obj.putImageData(arr[arr.length-1],0,0,0,0,imgH,imgH);
+        }
+        tempMouseEventData.pop();
+    })
+
+    // 清除
+    clear.click(function(){
+        arr=[];
+        obj.clearRect(0,0,imgW,imgH);
+        tempMouseEventData = [];
+    })
+
+    // 颜色选择
+    colorchoose.onchange=function(){
+        color=this.value;
+    }
+
+    // 粗细改变
+    widthchoose.onchange=function(){
+        linewidth=this.value;
+    }
+
+    //多边形边数
+    polychoose.change(function(){
+        n=this.value;
+    })
+
+    var x,y,w,h;
+    var lx,ly,lw,lh;
+    var cutdata;
+    var lastTime = null;
+
+    //上传数据
+    var tempEventData = {
+        mwm_id: 1, //课程id 
+        complete: 0, //完成时间
+        body: {
+            row_screen_size: { //采样的原始屏幕尺寸
+                height: 0, //画布高度
+                width: 0 //画布宽度
+            },
+            duration: 0, //录制总时长
+            buffer: {
+                audio: "", //音频base64编码  //blob对象转码
+                events: {
+                    data: [] //事件信息（坐标，事件)
+                }
+            }
+        }
+    };
+    var tempMouseEventData = [];
+
+    canvas.onmousedown=function(e){  
+        if(containerShow){
+            $(".container").fadeOut();
+            containerShow = false;
+        }   
+        x=e.offsetX;
+        y=e.offsetY;
+        if(type=="pencil"){
+            obj.beginPath();
+            obj.moveTo(x,y);
+        }
+        if(type=="rubber"){
+            obj.clearRect(x-5,y-5,10,10);
+        }
+        if(cutflag&&type=="cut"){
+            if(arr.length!=0){
+                arr.splice(-1,1);
+            }
+        }
+        var draw=new Draw(obj,{type:style,color:color,width:linewidth});//实例化构造函数
+
+        var tempObj = {
+            style: {
+                color: color, //画笔颜色
+                size: linewidth //画笔大小
+            },
+            shape: type, //画笔类型
+            trigger_time: new Date().getTime() - startTime, //开始画的时间  //记录鼠标移动所记录的当前毫秒数
+            points: []
+        };
+
+        canvas.onmousemove=function(e){
+            w=e.offsetX;
+            h=e.offsetY;
+            if(type!="rubber"){
+                obj.clearRect(0,0,imgW,imgH);
+                if(arr.length!=0){
+                    obj.putImageData(arr[arr.length-1],0,0,0,0,imgW,imgH);
+                }
+            }
+            if(cutflag&&type=="cut"){
+                if(iscut){
+                    obj.clearRect(lx,ly,lw-lx,lh-ly);
+                }
+                var nx=lx+(w-x);
+                var ny=ly+(h-y);
+                obj.putImageData(cutdata,nx,ny);
+            }else if(type=="poly"){
+                draw[type](x,y,w,h,n);
+            }else{
+                draw[type](x,y,w,h);
+            }
+            
+            var nowTime = new Date().getTime();
+            if((nowTime - lastTime) >= 100){
+                lastTime = nowTime;
+                var pointsObj = {
+                    "x": w,
+                    "y": h,
+                    "time": nowTime - startTime
+                }
+                tempObj.points.push(pointsObj);
+            }          
+        }
+
+        document.onmouseup=function(){
+            canvas.onmousemove=null;
+            document.onmouseup=null;
+            if(type=="cut"){
+                if(!cutflag){
+                    cutflag=true;
+                    cutdata=obj.getImageData(x+1,y+1,w-x-2,h-y-2);
+                    lx=x;ly=y;lw=w;lh=h;
+                    container.css({display:"none"});
+                }else{
+                    cutflag=false;
+                    container.css({display:"block"});
+                }
+            }
+            arr.push(obj.getImageData(0,0,imgW,imgH));
+
+            tempMouseEventData.push(tempObj);
+        }
+    }
+
+    //点击某容器外部触发事件
+    $(document).click(function(e){
+        var target = $(e.target);
+        if(target.closest('.container').length == 0 && target.closest('.comment_head_list').length == 0 && containerShow == true){
+            $(".container").fadeOut();
+            containerShow = false;
+        }
+    });
+
+    //录音
+    var recorder = null;
+    var startTime = null;
+    $(".comment_head_sound").click(function(){
+        if($(this).hasClass("comment_head_sound2")){
+            return false;
+        }
+        HZRecorder.get(function(rec) {
+            arr=[];
+            obj.clearRect(0,0,imgW,imgH);
+            $(".comment_head_sound").addClass("comment_head_sound2");
+            $(".comment_head_stop").addClass("comment_head_stop2");
+            $(".comment_head_big").addClass("comment_head_big2");
+            $(".comment_head_small").addClass("comment_head_small2");
+            $(".comment_head_out").addClass("comment_head_out2");
+
+            recorder = rec;
+            recorder.start();
+
+            startTime = new Date().getTime();
+            tempEventData.body.row_screen_size.height = imgH;
+            tempEventData.body.row_screen_size.width = imgW;
+        }, {
+            sampleBits: 16,
+            sampleRate: 16000
+        });
+    });
+
+    //停止录音
+    $(".comment_head_stop").click(function(){
+        if(!$(this).hasClass("comment_head_stop2")){
+            return false;
+        }
+        $(".comment_head_sound").removeClass("comment_head_sound2");
+        $(this).removeClass("comment_head_stop2");
+        $(".comment_head_big").removeClass("comment_head_big2");
+        $(".comment_head_small").removeClass("comment_head_small2");
+        $(".comment_head_out").removeClass("comment_head_out2");
+        recorder.stop();
+        tempEventData.complete = new Date().getTime();
+        tempEventData.body.duration =  new Date().getTime() - startTime;
+        tempEventData.body.buffer.events.data = tempMouseEventData;
+        var blob = recorder.getBlob();
+        blobToDataURL(blob, function(dataurl){
+            tempEventData.body.buffer.audio = dataurl;
+        });
+        console.log(tempEventData);
+    });
+
+    //blob转化成base64
+    function blobToDataURL(blob, callback) {
+        var a = new FileReader();
+        a.onload = function (e) { callback(e.target.result); }
+        a.readAsDataURL(blob);
+    }
+
+    //放大图片
+    $(".comment_head_big").click(function(){
+        if($(this).hasClass("comment_head_big2")){
+            return false;
+        }
+        alert("暂不支持此功能！")
+    });
+
+    //缩小图片
+    $(".comment_head_small").click(function(){
+        if($(this).hasClass("comment_head_small2")){
+            return false;
+        }
+        alert("暂不支持此功能！")
+    });
+
+    //退出讲评
+    $(".comment_head_out").click(function(){
+        if($(this).hasClass("comment_head_out2")){
+            return false;
+        }
+        alert("暂不支持此功能！")
+    });
+
+</script>
+
+</html>
